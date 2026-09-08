@@ -389,9 +389,7 @@ class ToolAgentLoop(AgentLoopBase):
             agent_data.response_logprobs if agent_data.response_logprobs else None,
             tools=schemas,
         )
-        if len(response_mask) >= self.response_length and not getattr(
-            agent_data, "invalid_tool_call_limit_reached", False
-        ):
+        if len(response_mask) >= self.response_length:
             return AgentState.TERMINATED
         agent_data.prompt_ids = merge_result.token_ids
         agent_data.response_mask = response_mask

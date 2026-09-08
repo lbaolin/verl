@@ -159,6 +159,7 @@ class TestCallToolErrorHandling(unittest.IsolatedAsyncioTestCase):
         tool_call = FakeFunctionCall(name="failing_tool", arguments='{"query": "test"}')
         response, reward, metadata = await loop._call_tool(tool_call, {}, self.agent_data)
         assert reward == 0.0
+        assert "failing_tool" in response.text
         assert "database connection failed" in response.text
         assert "invalid_tool_call" not in metadata
 

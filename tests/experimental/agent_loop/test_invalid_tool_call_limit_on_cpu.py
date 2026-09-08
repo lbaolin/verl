@@ -45,6 +45,65 @@ def _write_diagnostics(limit: int | None, state: SimpleNamespace) -> None:
     ToolAgentLoop._write_invalid_tool_call_diagnostics(loop, state)
 
 
+async def _run_processing_state(
+    tool_response: ToolResponse,
+    merged_token_ids: list[int],
+    response_length: int,
+) -> tuple[AgentState, SimpleNamespace]:
+    async def call_tool(tool_call, tools_kwargs, agent_data):
+        del tool_call, tools_kwargs, agent_data
+        return tool_response, 0.0, {"invalid_tool_call": True}
+
+    async def merge_tool_message(
+        previous_messages,
+        updated_messages,
+        runtime_token_ids,
+        response_mask,
+        response_logprobs=None,
+        *,
+        tools=None,
+    ):
+        del previous_messages, updated_messages, response_logprobs, tools
+        return (
+            SimpleNamespace(token_ids=[*runtime_token_ids, *merged_token_ids]),
+            [*response_mask, *([0] * len(merged_token_ids))],
+            None,
+        )
+
+    loop = SimpleNamespace(
+        max_parallel_calls=1,
+        max_consecutive_invalid_tool_calls=1,
+        processor=SimpleNamespace(image_processor=object()) if tool_response.image else None,
+        response_length=response_length,
+        tool_schemas=[],
+        _assert_mm_supported=lambda has_multi_modal: None,
+        ct_merge_context_msg=merge_tool_message,
+        _call_tool=call_tool,
+    )
+    loop._update_invalid_tool_call_tracking = ToolAgentLoop._update_invalid_tool_call_tracking.__get__(
+        loop, ToolAgentLoop
+    )
+    agent_data = SimpleNamespace(
+        messages=[{"role": "user", "content": "act"}],
+        tool_calls=[FunctionCall(name="act", arguments="{}")],
+        tools_kwargs={},
+        metrics={},
+        tool_rewards=[],
+        prompt_ids=[1, 2, 3],
+        response_mask=[],
+        response_logprobs=[],
+        image_data=None,
+        user_turns=0,
+        consecutive_invalid_tool_calls=0,
+        max_consecutive_invalid_tool_calls_observed=0,
+        invalid_tool_call_limit_reached=False,
+        extra_fields={},
+    )
+
+    state = await ToolAgentLoop._handle_processing_tools_state(loop, agent_data)
+    return state, agent_data
+
+
 def test_disabled_limit_does_not_change_output_metadata() -> None:
     state = _tracking_state()
 
@@ -114,58 +173,30 @@ def test_unclassified_execution_error_leaves_streak_unchanged() -> None:
 
 
 @pytest.mark.asyncio
-async def test_processing_state_retains_limiting_response_at_response_length_boundary() -> None:
-    async def call_tool(tool_call, tools_kwargs, agent_data):
-        del tool_call, tools_kwargs, agent_data
-        return ToolResponse(text="invalid call"), 0.0, {"invalid_tool_call": True}
-
-    async def merge_tool_message(
-        previous_messages,
-        updated_messages,
-        runtime_token_ids,
-        response_mask,
-        response_logprobs=None,
-        *,
-        tools=None,
-    ):
-        del previous_messages, updated_messages, response_logprobs, tools
-        return SimpleNamespace(token_ids=[*runtime_token_ids, 41]), [*response_mask, 0], None
-
-    loop = SimpleNamespace(
-        max_parallel_calls=1,
-        max_consecutive_invalid_tool_calls=1,
-        processor=None,
-        response_length=1,
-        tool_schemas=[],
-        _assert_mm_supported=lambda has_multi_modal: None,
-        ct_merge_context_msg=merge_tool_message,
-        _call_tool=call_tool,
-    )
-    loop._update_invalid_tool_call_tracking = ToolAgentLoop._update_invalid_tool_call_tracking.__get__(
-        loop, ToolAgentLoop
-    )
-    agent_data = SimpleNamespace(
-        messages=[{"role": "user", "content": "act"}],
-        tool_calls=[FunctionCall(name="act", arguments="{}")],
-        tools_kwargs={},
-        metrics={},
-        tool_rewards=[],
-        prompt_ids=[1, 2, 3],
-        response_mask=[],
-        response_logprobs=[],
-        image_data=None,
-        user_turns=0,
-        consecutive_invalid_tool_calls=0,
-        max_consecutive_invalid_tool_calls_observed=0,
-        invalid_tool_call_limit_reached=False,
-        extra_fields={},
-    )
-
-    state = await ToolAgentLoop._handle_processing_tools_state(loop, agent_data)
+async def test_processing_state_retains_limiting_response_within_response_budget() -> None:
+    state, agent_data = await _run_processing_state(ToolResponse(text="invalid call"), [41], response_length=2)
 
     assert state is AgentState.TERMINATED
     assert agent_data.messages[-1] == {"role": "tool", "content": "invalid call"}
     assert agent_data.prompt_ids == [1, 2, 3, 41]
     assert agent_data.response_mask == [0]
     assert agent_data.user_turns == 1
+    assert agent_data.invalid_tool_call_limit_reached is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("merged_token_ids", ([41], [41, 42]), ids=("at-limit", "over-limit"))
+async def test_processing_state_discards_limiting_multimodal_response_at_or_over_budget(
+    merged_token_ids: list[int],
+) -> None:
+    image = object()
+    state, agent_data = await _run_processing_state(
+        ToolResponse(text="invalid call", image=[image]), merged_token_ids, response_length=1
+    )
+
+    assert state is AgentState.TERMINATED
+    assert agent_data.prompt_ids == [1, 2, 3]
+    assert agent_data.response_mask == []
+    assert agent_data.image_data is None
+    assert agent_data.user_turns == 0
     assert agent_data.invalid_tool_call_limit_reached is True

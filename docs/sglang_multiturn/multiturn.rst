@@ -31,7 +31,7 @@ The built-in ``ToolAgentLoop`` can optionally stop a trajectory after repeated i
 
 The default value is ``null``, which disables this guard and preserves existing behavior. Set ``max_consecutive_invalid_tool_calls`` to a positive integer to terminate a trajectory when the final consecutive-invalid streak reaches that value. The limit is global to the rollout configuration; there is no per-sample override.
 
-Unknown tool names, malformed JSON arguments, and tool results whose metadata contains ``invalid_tool_call=True`` are counted as invalid tool calls. A successful tool call resets the streak, while execution exceptions are neutral and leave the current streak unchanged. Parallel tool results are evaluated in the order declared by the model after the full batch completes, and the tool response that reaches the limit remains in the rollout before termination.
+Unknown tool names, malformed JSON arguments, and tool results whose metadata contains ``invalid_tool_call=True`` are counted as invalid tool calls. A successful tool call resets the streak, while execution exceptions are neutral and leave the current streak unchanged. Parallel tool results are evaluated in the order declared by the model after the full batch completes. The limiting tool-response batch remains in the rollout only when its merged response length stays below ``response_length``; otherwise, the existing response-length guard terminates without committing the batch's tokens or new media to the rollout output.
 
 When this guard is enabled, trajectories expose ``max_consecutive_invalid_tool_calls_observed`` and ``invalid_tool_call_limit_reached`` in ``extra_fields``. Trajectories that reach the limit also expose ``termination_reason="invalid_tool_call_limit"``.
 
