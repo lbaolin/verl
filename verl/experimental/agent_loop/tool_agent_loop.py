@@ -524,7 +524,7 @@ class ToolAgentLoop(AgentLoopBase):
                 )
         except Exception as e:
             logger.warning(f"Error executing tool '{tool_name}': {e}")
-            return ToolResponse(text=f"Error executing tool '{tool_name}': {e}"), 0.0, {}
+            return ToolResponse(text=f"Error executing tool '{tool_name}': {e}"), 0.0, {"invalid_tool_call": False}
         finally:
             # Only BaseTool instances need release (function tools never set instance_id).
             if tool and instance_id and not isinstance(tool, FunctionTool):

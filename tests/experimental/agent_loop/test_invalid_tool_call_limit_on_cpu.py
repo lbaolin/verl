@@ -162,7 +162,7 @@ def test_later_success_in_parallel_batch_cancels_limit_reached_mid_batch() -> No
     assert state.invalid_tool_call_limit_reached is False
 
 
-def test_unclassified_execution_error_leaves_streak_unchanged() -> None:
+def test_unclassified_result_leaves_streak_unchanged() -> None:
     state = _tracking_state()
 
     _track(2, state, [_result(True)])

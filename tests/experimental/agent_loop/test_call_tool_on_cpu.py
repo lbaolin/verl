@@ -152,8 +152,8 @@ class TestCallToolErrorHandling(unittest.IsolatedAsyncioTestCase):
         assert reward == 0.0
         assert "Invalid JSON" in response.text
 
-    async def test_tool_execution_error_is_not_misclassified_as_invalid(self):
-        """Tool execution failure should remain unclassified."""
+    async def test_tool_execution_error_is_classified_as_non_invalid(self):
+        """Tool execution failure should be classified as non-invalid."""
         tools = {"failing_tool": FakeFailingTool("failing_tool")}
         loop = _make_tool_agent_loop(tools)
         tool_call = FakeFunctionCall(name="failing_tool", arguments='{"query": "test"}')
@@ -161,7 +161,7 @@ class TestCallToolErrorHandling(unittest.IsolatedAsyncioTestCase):
         assert reward == 0.0
         assert "failing_tool" in response.text
         assert "database connection failed" in response.text
-        assert "invalid_tool_call" not in metadata
+        assert metadata["invalid_tool_call"] is False
 
     async def test_tool_declared_invalid_call_is_preserved(self):
         """A tool's explicit invalid classification and metadata must survive."""
