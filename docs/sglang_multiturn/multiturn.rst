@@ -20,7 +20,7 @@ These configuration activates the sglang engine for multi-turn interaction durin
 Invalid Tool Call Limit
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Multi-turn rollouts can optionally stop a trajectory after repeated invalid tool calls:
+The built-in ``ToolAgentLoop`` can optionally stop a trajectory after repeated invalid tool calls:
 
 .. code-block:: yaml
 
