@@ -138,7 +138,7 @@ async def test_processing_state_retains_limiting_response_at_response_length_bou
         response_length=1,
         tool_schemas=[],
         _assert_mm_supported=lambda has_multi_modal: None,
-        ct_merge_non_assistant_msg=merge_tool_message,
+        ct_merge_context_msg=merge_tool_message,
         _call_tool=call_tool,
     )
     loop._update_invalid_tool_call_tracking = ToolAgentLoop._update_invalid_tool_call_tracking.__get__(
