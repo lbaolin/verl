@@ -29,11 +29,11 @@ The built-in ``ToolAgentLoop`` can optionally stop a trajectory after repeated i
         multi_turn:
           max_consecutive_invalid_tool_calls: 5
 
-The default value is ``null``, which disables this guard and preserves existing behavior. Set ``max_consecutive_invalid_tool_calls`` to a positive integer to terminate a trajectory when the final consecutive-invalid streak reaches that value. The limit is global to the rollout configuration; there is no per-sample override.
+The default is ``null``, which disables the guard. Set it to a positive integer to stop a trajectory after that many consecutive invalid tool calls.
 
-Unknown tool names, malformed JSON arguments, and tool results whose metadata contains ``invalid_tool_call=True`` are counted as invalid tool calls. A successful tool call resets the streak. A tool execution exception also resets it because the failure is not attributed to the model. When the model issues parallel tool calls, the guard updates the streak from their results in model-declared order after the whole batch completes.
+Unknown tools, malformed JSON arguments, and results marked ``invalid_tool_call=True`` count as invalid. Successful calls and tool execution failures reset the streak. Parallel results update the streak in model-declared order.
 
-When this guard is enabled, trajectories expose ``max_consecutive_invalid_tool_calls_observed`` and ``invalid_tool_call_limit_reached`` in ``extra_fields``. Trajectories that reach the limit also expose ``termination_reason="invalid_tool_call_limit"``.
+When enabled, the rollout reports the maximum observed streak, whether the limit was reached, and the termination reason in ``extra_fields``.
 
 Custom Tool Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~
