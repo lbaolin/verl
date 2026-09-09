@@ -20,34 +20,24 @@ from verl.experimental.agent_loop.tool_agent_loop import ToolAgentLoop
 from verl.tools.schemas import ToolResponse
 
 
-def _result(invalid: bool | None) -> tuple[ToolResponse, float, dict]:
-    metadata = {} if invalid is None else {"invalid_tool_call": invalid}
-    return ToolResponse(text="tool result"), 0.0, metadata
-
-
-def _tracking_state() -> SimpleNamespace:
-    return SimpleNamespace(
+def _run_tracking_scenario(limit: int | None, invalid_markers: list[bool | None]) -> SimpleNamespace:
+    state = SimpleNamespace(
         consecutive_invalid_tool_calls=0,
         invalid_tool_call_limit_reached=False,
         extra_fields={},
     )
-
-
-def _track(limit: int | None, state: SimpleNamespace, results: list[tuple]) -> None:
     loop = SimpleNamespace(max_consecutive_invalid_tool_calls=limit)
+    results = [
+        (ToolResponse(text="tool result"), 0.0, {} if invalid is None else {"invalid_tool_call": invalid})
+        for invalid in invalid_markers
+    ]
     ToolAgentLoop._update_invalid_tool_call_tracking(loop, state, results)
-
-
-def _write_diagnostics(limit: int | None, state: SimpleNamespace) -> None:
-    loop = SimpleNamespace(max_consecutive_invalid_tool_calls=limit)
     ToolAgentLoop._write_invalid_tool_call_diagnostics(loop, state)
+    return state
 
 
 def test_disabled_limit_does_not_change_output_metadata() -> None:
-    state = _tracking_state()
-
-    _track(None, state, [_result(True), _result(True)])
-    _write_diagnostics(None, state)
+    state = _run_tracking_scenario(None, [True, True])
 
     assert state.extra_fields == {}
     assert state.invalid_tool_call_limit_reached is False
@@ -64,10 +54,7 @@ def test_disabled_limit_does_not_change_output_metadata() -> None:
 def test_tracking_uses_model_order_and_reports_termination_reason(
     results: list[bool | None], expected_streak: int, expected_reached: bool
 ) -> None:
-    state = _tracking_state()
-
-    _track(2, state, [_result(invalid) for invalid in results])
-    _write_diagnostics(2, state)
+    state = _run_tracking_scenario(2, results)
 
     assert state.consecutive_invalid_tool_calls == expected_streak
     assert state.invalid_tool_call_limit_reached is expected_reached
