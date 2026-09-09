@@ -62,11 +62,6 @@ class MultiTurnConfig(BaseConfig):
     format: str = "hermes"
     num_repeat_rollouts: Optional[int] = None
 
-    def __post_init__(self) -> None:
-        limit = self.max_consecutive_invalid_tool_calls
-        if limit is not None and (type(limit) is not int or limit <= 0):
-            raise ValueError("max_consecutive_invalid_tool_calls must be a positive integer or null")
-
 
 @dataclass
 class CustomAsyncServerConfig(BaseConfig):
