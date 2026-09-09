@@ -33,7 +33,7 @@ The default is ``null``, which disables the guard. Set it to a positive integer 
 
 Unknown tools, malformed JSON arguments, and results marked ``invalid_tool_call=True`` count as invalid. Successful calls and tool execution failures reset the streak. Parallel results update the streak in model-declared order.
 
-When enabled, the rollout reports the maximum observed streak, whether the limit was reached, and the termination reason in ``extra_fields``.
+Trajectories stopped by the guard report ``termination_reason="invalid_tool_call_limit"`` in ``extra_fields``.
 
 Custom Tool Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~

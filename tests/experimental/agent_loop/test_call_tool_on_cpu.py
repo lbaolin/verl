@@ -116,7 +116,7 @@ class TestCallToolErrorHandling(unittest.IsolatedAsyncioTestCase):
         response, reward, metadata = await self.loop._call_tool(tool_call, {}, self.agent_data)
         assert reward == 1.0
         assert "OK" in response.text
-        assert metadata["invalid_tool_call"] is False
+        assert metadata == {}
 
     async def test_unknown_function_name(self):
         """Unknown function name should list available tools."""
@@ -161,7 +161,7 @@ class TestCallToolErrorHandling(unittest.IsolatedAsyncioTestCase):
         assert reward == 0.0
         assert "failing_tool" in response.text
         assert "database connection failed" in response.text
-        assert metadata["invalid_tool_call"] is False
+        assert metadata == {}
 
     async def test_tool_declared_invalid_call_is_preserved(self):
         """A tool's explicit invalid classification and metadata must survive."""

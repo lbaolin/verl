@@ -20,14 +20,14 @@ from verl.experimental.agent_loop.tool_agent_loop import ToolAgentLoop
 from verl.tools.schemas import ToolResponse
 
 
-def _result(invalid: bool) -> tuple[ToolResponse, float, dict]:
-    return ToolResponse(text="tool result"), 0.0, {"invalid_tool_call": invalid}
+def _result(invalid: bool | None) -> tuple[ToolResponse, float, dict]:
+    metadata = {} if invalid is None else {"invalid_tool_call": invalid}
+    return ToolResponse(text="tool result"), 0.0, metadata
 
 
 def _tracking_state() -> SimpleNamespace:
     return SimpleNamespace(
         consecutive_invalid_tool_calls=0,
-        max_consecutive_invalid_tool_calls_observed=0,
         invalid_tool_call_limit_reached=False,
         extra_fields={},
     )
@@ -54,15 +54,15 @@ def test_disabled_limit_does_not_change_output_metadata() -> None:
 
 
 @pytest.mark.parametrize(
-    ("results", "expected_streak", "expected_max", "expected_reached"),
+    ("results", "expected_streak", "expected_reached"),
     [
-        pytest.param([True, True], 2, 2, True, id="reaches-limit"),
-        pytest.param([True, False, True], 1, 1, False, id="valid-resets-streak"),
-        pytest.param([True, True, False], 0, 2, False, id="final-valid-cancels-limit"),
+        pytest.param([True, True], 2, True, id="reaches-limit"),
+        pytest.param([True, None, True], 1, False, id="missing-marker-resets-streak"),
+        pytest.param([True, True, False], 0, False, id="final-valid-cancels-limit"),
     ],
 )
-def test_tracking_uses_model_order_and_reports_limit(
-    results: list[bool], expected_streak: int, expected_max: int, expected_reached: bool
+def test_tracking_uses_model_order_and_reports_termination_reason(
+    results: list[bool | None], expected_streak: int, expected_reached: bool
 ) -> None:
     state = _tracking_state()
 
@@ -70,10 +70,5 @@ def test_tracking_uses_model_order_and_reports_limit(
     _write_diagnostics(2, state)
 
     assert state.consecutive_invalid_tool_calls == expected_streak
-    assert state.max_consecutive_invalid_tool_calls_observed == expected_max
     assert state.invalid_tool_call_limit_reached is expected_reached
-    assert state.extra_fields == {
-        "max_consecutive_invalid_tool_calls_observed": expected_max,
-        "invalid_tool_call_limit_reached": expected_reached,
-        **({"termination_reason": "invalid_tool_call_limit"} if expected_reached else {}),
-    }
+    assert state.extra_fields == ({"termination_reason": "invalid_tool_call_limit"} if expected_reached else {})

@@ -86,7 +86,6 @@ class AgentData:
         self.user_turns = 0
         self.assistant_turns = 0
         self.consecutive_invalid_tool_calls = 0
-        self.max_consecutive_invalid_tool_calls_observed = 0
         self.invalid_tool_call_limit_reached = False
 
         # Temporary state for tool calls
@@ -423,27 +422,16 @@ class ToolAgentLoop(AgentLoopBase):
             invalid_tool_call = result_metadata.get("invalid_tool_call")
             if invalid_tool_call is True:
                 agent_data.consecutive_invalid_tool_calls += 1
-                agent_data.max_consecutive_invalid_tool_calls_observed = max(
-                    agent_data.max_consecutive_invalid_tool_calls_observed,
-                    agent_data.consecutive_invalid_tool_calls,
-                )
-            elif invalid_tool_call is False:
+            else:
                 agent_data.consecutive_invalid_tool_calls = 0
 
         agent_data.invalid_tool_call_limit_reached = agent_data.consecutive_invalid_tool_calls >= limit
 
     def _write_invalid_tool_call_diagnostics(self, agent_data: AgentData) -> None:
-        if self.max_consecutive_invalid_tool_calls is None:
+        if self.max_consecutive_invalid_tool_calls is None or not agent_data.invalid_tool_call_limit_reached:
             return
 
-        agent_data.extra_fields.update(
-            {
-                "max_consecutive_invalid_tool_calls_observed": (agent_data.max_consecutive_invalid_tool_calls_observed),
-                "invalid_tool_call_limit_reached": agent_data.invalid_tool_call_limit_reached,
-            }
-        )
-        if agent_data.invalid_tool_call_limit_reached:
-            agent_data.extra_fields["termination_reason"] = "invalid_tool_call_limit"
+        agent_data.extra_fields["termination_reason"] = "invalid_tool_call_limit"
 
     def _build_assistant_message(self, content: str, agent_data: AgentData) -> dict[str, Any]:
         message: dict[str, Any] = {"role": "assistant", "content": content or ""}
@@ -524,7 +512,7 @@ class ToolAgentLoop(AgentLoopBase):
                 )
         except Exception as e:
             logger.warning(f"Error executing tool '{tool_name}': {e}")
-            return ToolResponse(text=f"Error executing tool '{tool_name}': {e}"), 0.0, {"invalid_tool_call": False}
+            return ToolResponse(text=f"Error executing tool '{tool_name}': {e}"), 0.0, {}
         finally:
             # Only BaseTool instances need release (function tools never set instance_id).
             if tool and instance_id and not isinstance(tool, FunctionTool):
@@ -550,6 +538,4 @@ class ToolAgentLoop(AgentLoopBase):
                 if attr_value is not None:
                     tool_response_kwargs[attr_name] = attr_value
 
-        result_metadata = dict(res)
-        result_metadata.setdefault("invalid_tool_call", False)
-        return ToolResponse(**tool_response_kwargs), tool_reward, result_metadata
+        return ToolResponse(**tool_response_kwargs), tool_reward, res
