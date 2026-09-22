@@ -22,7 +22,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pprint import pprint
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TypeVar
 
 import numpy as np
 import ray
@@ -1993,13 +1993,14 @@ class PPOTrainer(ABC):
         )
 
 
+_PPOTrainerT = TypeVar("_PPOTrainerT", bound=PPOTrainer)
 TRAINER_REGISTRY: dict[str, type[PPOTrainer]] = {}
 
 
-def register_trainer(name: str):
+def register_trainer(name: str) -> Callable[[type[_PPOTrainerT]], type[_PPOTrainerT]]:
     """Class decorator that registers a :class:`PPOTrainer` subclass under ``name``."""
 
-    def decorator(cls: type[PPOTrainer]) -> type[PPOTrainer]:
+    def decorator(cls: type[_PPOTrainerT]) -> type[_PPOTrainerT]:
         if not (isinstance(cls, type) and issubclass(cls, PPOTrainer)):
             raise TypeError(f"register_trainer expected a PPOTrainer subclass, got {cls!r}")
         existing = TRAINER_REGISTRY.get(name)

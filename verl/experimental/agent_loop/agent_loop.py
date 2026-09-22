@@ -32,7 +32,7 @@ import logging
 import os
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TypeVar
 from uuid import uuid4
 
 import hydra
@@ -459,6 +459,9 @@ class AgentLoopBase(ABC):
         raise NotImplementedError
 
 
+_AgentLoopT = TypeVar("_AgentLoopT", bound=AgentLoopBase)
+
+
 """Agent loop registry: key is agent_name, value is a dict of agent loop config
 used by hydra.utils.instantiate to initialize agent loop instance.
 
@@ -467,10 +470,10 @@ https://hydra.cc/docs/advanced/instantiate_objects/overview/
 _agent_loop_registry: dict[str, dict] = {}
 
 
-def register(agent_name: str):
+def register(agent_name: str) -> Callable[[type[_AgentLoopT]], type[_AgentLoopT]]:
     """Register agent loop class."""
 
-    def decorator(subclass: type[AgentLoopBase]) -> type[AgentLoopBase]:
+    def decorator(subclass: type[_AgentLoopT]) -> type[_AgentLoopT]:
         fqdn = f"{subclass.__module__}.{subclass.__qualname__}"
         _agent_loop_registry[agent_name] = {"_target_": fqdn}
         return subclass

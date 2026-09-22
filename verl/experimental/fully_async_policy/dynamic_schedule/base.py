@@ -32,14 +32,16 @@ Then set ``async_training.dynamic_schedule_policy: "my_policy"`` in the training
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Callable, TypeVar
 
+_DynamicSchedulePolicyT = TypeVar("_DynamicSchedulePolicyT", bound="DynamicSchedulePolicyBase")
 _policy_registry: dict[str, type["DynamicSchedulePolicyBase"]] = {}
 
 
-def register_policy(name: str):
+def register_policy(name: str) -> Callable[[type[_DynamicSchedulePolicyT]], type[_DynamicSchedulePolicyT]]:
     """Decorator: register a DynamicSchedulePolicyBase subclass under *name*."""
 
-    def decorator(cls: type["DynamicSchedulePolicyBase"]) -> type["DynamicSchedulePolicyBase"]:
+    def decorator(cls: type[_DynamicSchedulePolicyT]) -> type[_DynamicSchedulePolicyT]:
         _policy_registry[name] = cls
         return cls
 

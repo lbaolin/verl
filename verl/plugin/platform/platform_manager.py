@@ -17,6 +17,7 @@ modifying the verl source tree.
 
 import logging
 import os
+from typing import Callable, TypeVar
 
 from .platform_base import PlatformBase
 
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "INFO"))
 
 _current_platform: PlatformBase | None = None
+_PlatformT = TypeVar("_PlatformT", bound=PlatformBase)
 
 
 class PlatformRegistry:
@@ -40,7 +42,7 @@ class PlatformRegistry:
     _platforms: dict[str, type[PlatformBase]] = {}
 
     @classmethod
-    def register(cls, platform: str):
+    def register(cls, platform: str) -> Callable[[type[_PlatformT]], type[_PlatformT]]:
         """Class decorator that registers a ``PlatformBase`` subclass.
 
         Usage::
@@ -54,7 +56,7 @@ class PlatformRegistry:
                 ...
         """
 
-        def decorator(platform_cls: type[PlatformBase]) -> type[PlatformBase]:
+        def decorator(platform_cls: type[_PlatformT]) -> type[_PlatformT]:
             assert issubclass(platform_cls, PlatformBase), f"{platform_cls.__name__} must be a subclass of PlatformBase"
             name = platform.strip().lower()
             if name in cls._platforms:

@@ -14,7 +14,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Generator
+from typing import Any, AsyncGenerator, Callable, Generator, TypeVar
 
 import ray
 import torch
@@ -46,6 +46,9 @@ class TensorMeta:
     """The offset of the weight tensor in the bucket."""
 
 
+_CheckpointEngineT = TypeVar("_CheckpointEngineT", bound="CheckpointEngine")
+
+
 class CheckpointEngineRegistry:
     """Checkpoint engine registry."""
 
@@ -57,14 +60,15 @@ class CheckpointEngineRegistry:
     # dependency would otherwise only show up as an unregistered backend.
     _import_errors: dict[str, ImportError] = {}
 
-    def register(backend: str):
+    @staticmethod
+    def register(backend: str) -> Callable[[type[_CheckpointEngineT]], type[_CheckpointEngineT]]:
         """Register a checkpoint engine.
 
         Args:
             backend: The backend of the checkpoint engine.
         """
 
-        def wrapper(cls: type["CheckpointEngine"]):
+        def wrapper(cls: type[_CheckpointEngineT]) -> type[_CheckpointEngineT]:
             CheckpointEngineRegistry._registry[backend] = cls
             return cls
 

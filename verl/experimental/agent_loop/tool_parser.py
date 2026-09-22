@@ -16,7 +16,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TypeVar
 
 import regex
 from pydantic import BaseModel
@@ -27,6 +27,9 @@ from verl.utils.rollout_trace import rollout_trace_op
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
+
+
+_ToolParserT = TypeVar("_ToolParserT", bound="ToolParser")
 
 
 class FunctionCall(BaseModel):
@@ -85,8 +88,8 @@ class ToolParser(ABC):
         return cls._registry[name](tokenizer)
 
     @classmethod
-    def register(cls, name: str):
-        def decorator(subclass: type[ToolParser]) -> type[ToolParser]:
+    def register(cls, name: str) -> Callable[[type[_ToolParserT]], type[_ToolParserT]]:
+        def decorator(subclass: type[_ToolParserT]) -> type[_ToolParserT]:
             cls._registry[name] = subclass
             return subclass
 

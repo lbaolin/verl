@@ -18,7 +18,7 @@ The abstract base class defining the interface for model training engines.
 import os
 from abc import abstractmethod
 from contextlib import nullcontext
-from typing import Any, Callable, ContextManager, Generator, Optional
+from typing import Any, Callable, ContextManager, Generator, Optional, TypeVar
 
 import torch
 from tensordict import TensorDict
@@ -336,6 +336,9 @@ class BaseEngineCtx:
         self.engine.mode = None
 
 
+_BaseEngineT = TypeVar("_BaseEngineT", bound=BaseEngine)
+
+
 class EngineRegistry:
     """
     A registry for managing and instantiating different types of training engines.
@@ -354,7 +357,7 @@ class EngineRegistry:
         backend: list[str] | str,
         device: list[str] | str = "cuda",
         vendor: list[str] | str | None = None,
-    ):
+    ) -> Callable[[type[_BaseEngineT]], type[_BaseEngineT]]:
         """
         A class method decorator that registers an engine class with a given key.
 
@@ -372,7 +375,7 @@ class EngineRegistry:
             A decorator function that takes an engine class and registers it.
         """
 
-        def decorator(engine_class):
+        def decorator(engine_class: type[_BaseEngineT]) -> type[_BaseEngineT]:
             assert issubclass(engine_class, BaseEngine)
             if model_type not in cls._engines:
                 cls._engines[model_type] = {}

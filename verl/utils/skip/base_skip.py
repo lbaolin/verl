@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Callable
+from typing import Callable, TypeVar
 
 
 class SkipAction(Enum):
@@ -67,13 +67,14 @@ class BaseSkip:
         raise NotImplementedError("extract_step is not implemented")
 
 
+_BaseSkipT = TypeVar("_BaseSkipT", bound=BaseSkip)
 SKIP_REGISTRY: dict[str, type[BaseSkip]] = {}
 
 
 def register_skip(
     name: str,
-) -> Callable[[type[BaseSkip]], type[BaseSkip]]:
-    def decorator(cls: type[BaseSkip]) -> type[BaseSkip]:
+) -> Callable[[type[_BaseSkipT]], type[_BaseSkipT]]:
+    def decorator(cls: type[_BaseSkipT]) -> type[_BaseSkipT]:
         SKIP_REGISTRY[name] = cls
         return cls
 
