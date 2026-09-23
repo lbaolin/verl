@@ -15,6 +15,15 @@ _target_: verl.workers.config.VeOmniActorConfig
 
 strategy: veomni
 
+# FSDP checkpoint config used by the VeOmni checkpoint manager
+checkpoint:
+
+  # Target dataclass for this configuration
+  _target_: verl.workers.config.FSDPCheckpointConfig
+
+  # Maximum size of each Hugging Face model shard. Uses the Transformers default when null.
+  hf_model_max_shard_size: null
+
 use_remove_padding: ${oc.select:actor_rollout_ref.model.use_remove_padding,false}
 
 # round every packed micro-batch up to a veomni.pad_to_length_bucket multiple, so kernel shapes

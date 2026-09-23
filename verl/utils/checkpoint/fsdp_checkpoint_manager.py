@@ -459,7 +459,11 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
                 drop_tied_target_keys(state_dict, save_model, model_config)
 
-                save_model.save_pretrained(hf_local_path, state_dict=state_dict)
+                save_kwargs = {"state_dict": state_dict}
+                max_shard_size = getattr(self.checkpoint_config, "hf_model_max_shard_size", None)
+                if max_shard_size is not None:
+                    save_kwargs["max_shard_size"] = max_shard_size
+                save_model.save_pretrained(hf_local_path, **save_kwargs)
                 log_with_rank(
                     f"Saved hf_model to {os.path.abspath(hf_local_path)}",
                     rank=self.rank,

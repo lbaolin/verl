@@ -22,7 +22,7 @@ from verl.trainer.config import CheckpointConfig, RolloutCorrectionConfig
 from verl.utils.profiler.config import ProfilerConfig
 from verl.utils.qat import QATConfig
 
-from .checkpoint import McoreCheckpointConfig
+from .checkpoint import FSDPCheckpointConfig, McoreCheckpointConfig
 from .engine import (
     FSDPEngineConfig,
     McoreEngineConfig,
@@ -305,6 +305,7 @@ class FSDPActorConfig(ActorConfig):
     """
 
     strategy: str = "fsdp"
+    checkpoint: FSDPCheckpointConfig = field(default_factory=FSDPCheckpointConfig)
     grad_clip: float = 1.0
     ulysses_sequence_parallel_size: int = 1
     entropy_from_logits_with_chunking: bool = False
@@ -356,6 +357,7 @@ class VeOmniActorConfig(ActorConfig):
     """
 
     strategy: str = "veomni"
+    checkpoint: FSDPCheckpointConfig = field(default_factory=FSDPCheckpointConfig)
     veomni: VeOmniEngineConfig = field(default_factory=VeOmniEngineConfig)
     pad_to_length: bool = False
     use_remove_padding: bool = False

@@ -351,6 +351,14 @@ Actor/Rollout/Reference Policy
     For FSDP, ``hf_model`` saves the full HF model on rank 0 in addition to the sharded
     ``model`` shards.
 
+  - ``hf_model_max_shard_size``: Maximum size of each file in the HuggingFace ``hf_model``
+    export produced by ``FSDPCheckpointManager`` (used by the FSDP and VeOmni engines,
+    including SFT with its default FSDP engine).
+    Accepts the same integer or size string syntax as Transformers ``save_pretrained``
+    (for example, ``"5GB"``). The default ``null`` leaves the argument unset and preserves
+    the installed Transformers default. This controls the exported file layout; it does not
+    reduce the full rank-0 CPU state-dict gather used for the export.
+
   - ``load_contents``: The contents to load in the checkpoint, you can specify different checkpoint loading contents. By default, it is the same with ``save_checkpoint``.
 
   - ``save_lora_only`` (bool, default ``False``): When ``True`` and the model has LoRA adapters,

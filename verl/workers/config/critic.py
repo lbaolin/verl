@@ -21,7 +21,7 @@ from verl.base_config import BaseConfig
 from verl.trainer.config import BaseModelConfig, CheckpointConfig
 from verl.utils.profiler import ProfilerConfig
 
-from .checkpoint import McoreCheckpointConfig
+from .checkpoint import FSDPCheckpointConfig, McoreCheckpointConfig
 from .engine import (
     FSDPEngineConfig,
     McoreEngineConfig,
@@ -203,6 +203,7 @@ class FSDPCriticConfig(CriticConfig):
     }
 
     strategy: str = "fsdp"
+    checkpoint: FSDPCheckpointConfig = field(default_factory=FSDPCheckpointConfig)
     fsdp: FSDPEngineConfig = field(default_factory=FSDPEngineConfig)
     forward_micro_batch_size: int = 1
     forward_micro_batch_size_per_gpu: int = 1
@@ -293,6 +294,7 @@ class VeOmniCriticConfig(CriticConfig):
     """
 
     strategy: str = "veomni"
+    checkpoint: FSDPCheckpointConfig = field(default_factory=FSDPCheckpointConfig)
     veomni: VeOmniEngineConfig = field(default_factory=VeOmniEngineConfig)
     grad_clip: float = 1.0
 

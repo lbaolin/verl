@@ -25,6 +25,15 @@ _target_: verl.workers.config.FSDPActorConfig
 # TODO(haibin.lin): switch to fsdp2
 strategy: fsdp
 
+# FSDP checkpoint config
+checkpoint:
+
+  # Target dataclass for this configuration
+  _target_: verl.workers.config.FSDPCheckpointConfig
+
+  # Maximum size of each Hugging Face model shard. Uses the Transformers default when null.
+  hf_model_max_shard_size: null
+
 # Gradient clipping for actor updates, specific to the strategy.
 grad_clip: 1.0
 
@@ -64,4 +73,3 @@ fsdp_config:
 
 # Whether to remove padding tokens in inputs during training
 use_remove_padding: ${oc.select:actor_rollout_ref.model.use_remove_padding,false}
-

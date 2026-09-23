@@ -27,7 +27,20 @@ from typing import Any
 
 from verl.trainer.config import CheckpointConfig
 
-__all__ = ["McoreCheckpointConfig"]
+__all__ = ["FSDPCheckpointConfig", "McoreCheckpointConfig"]
+
+
+@dataclass
+class FSDPCheckpointConfig(CheckpointConfig):
+    """Checkpoint config consumed by ``FSDPCheckpointManager``.
+
+    Args:
+        hf_model_max_shard_size (str | int | None): Maximum size of each
+            Hugging Face model shard. ``None`` preserves the installed
+            Transformers default.
+    """
+
+    hf_model_max_shard_size: str | int | None = None
 
 
 @dataclass
