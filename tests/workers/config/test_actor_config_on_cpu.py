@@ -87,6 +87,24 @@ class TestActorConfig(unittest.TestCase):
         self.assertIsInstance(config, FSDPActorConfig)
         self.assertEqual(config.strategy, "fsdp2")
 
+    def test_fsdp_actor_config_accepts_hf_save_pretrained_kwargs_mapping(self):
+        """Test overriding the complete Hugging Face save kwargs mapping."""
+        from hydra import compose, initialize_config_dir
+
+        overrides = [
+            'checkpoint.hf_save_pretrained_kwargs={max_shard_size:"5GB",safe_serialization:false}',
+            "ppo_micro_batch_size_per_gpu=128",
+        ]
+        with initialize_config_dir(version_base=None, config_dir=os.path.abspath("verl/trainer/config/actor")):
+            cfg = compose(config_name="dp_actor", overrides=overrides)
+
+        config = omega_conf_to_dataclass(cfg)
+
+        self.assertEqual(
+            config.checkpoint.hf_save_pretrained_kwargs,
+            {"max_shard_size": "5GB", "safe_serialization": False},
+        )
+
     def test_megatron_actor_config_from_yaml(self):
         """Test creating McoreActorConfig from YAML file."""
         from hydra import compose, initialize_config_dir

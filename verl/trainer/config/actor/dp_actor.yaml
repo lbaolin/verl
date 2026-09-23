@@ -29,10 +29,7 @@ strategy: fsdp
 checkpoint:
 
   # Extra keyword arguments forwarded to Hugging Face save_pretrained.
-  hf_save_pretrained_kwargs:
-
-    # Maximum shard size. Uses the Transformers default when null.
-    max_shard_size: null
+  hf_save_pretrained_kwargs: null
 
 # Gradient clipping for actor updates, specific to the strategy.
 grad_clip: 1.0
