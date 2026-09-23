@@ -351,10 +351,10 @@ Actor/Rollout/Reference Policy
     For FSDP, ``hf_model`` saves the full HF model on rank 0 in addition to the sharded
     ``model`` shards.
 
-  - ``hf_model_max_shard_size``: Maximum shard size for FSDP and VeOmni ``hf_model`` exports.
-    Add ``hf_model`` to ``save_contents``; ``null`` preserves the Transformers default. Set
-    ``actor_rollout_ref.actor.checkpoint.hf_model_max_shard_size=5GB`` for a PPO actor or
-    ``checkpoint.hf_model_max_shard_size=5GB`` for SFT.
+  - ``hf_save_pretrained_kwargs``: Extra keyword arguments for FSDP and VeOmni
+    ``hf_model`` exports. ``max_shard_size: null`` preserves the Transformers default. Set
+    ``actor_rollout_ref.actor.checkpoint.hf_save_pretrained_kwargs.max_shard_size=5GB``
+    for a PPO actor or ``checkpoint.hf_save_pretrained_kwargs.max_shard_size=5GB`` for SFT.
 
   - ``load_contents``: The contents to load in the checkpoint, you can specify different checkpoint loading contents. By default, it is the same with ``save_checkpoint``.
 

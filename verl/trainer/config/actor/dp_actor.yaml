@@ -28,8 +28,11 @@ strategy: fsdp
 # checkpoint configs
 checkpoint:
 
-  # Maximum size of each Hugging Face model shard. Uses the Transformers default when null.
-  hf_model_max_shard_size: null
+  # Extra keyword arguments forwarded to Hugging Face save_pretrained.
+  hf_save_pretrained_kwargs:
+
+    # Maximum shard size. Uses the Transformers default when null.
+    max_shard_size: null
 
 # Gradient clipping for actor updates, specific to the strategy.
 grad_clip: 1.0

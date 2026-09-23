@@ -56,8 +56,11 @@ checkpoint:
   # For more flexibility, you can specify the contents to load from the checkpoint.
   load_contents: ${checkpoint.save_contents}
 
-  # Maximum size of each Hugging Face model shard. Uses the Transformers default when null.
-  hf_model_max_shard_size: null
+  # Extra keyword arguments forwarded to Hugging Face save_pretrained.
+  hf_save_pretrained_kwargs:
+
+    # Maximum shard size. Uses the Transformers default when null.
+    max_shard_size: null
 
 trainer:
   default_local_dir: checkpoints/${trainer.project_name}/${trainer.experiment_name}
