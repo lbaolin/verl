@@ -352,10 +352,9 @@ Actor/Rollout/Reference Policy
     ``model`` shards.
 
   - ``hf_model_max_shard_size``: Maximum shard size for FSDP and VeOmni ``hf_model`` exports.
-    Add ``hf_model`` to ``save_contents``; ``null`` preserves the Transformers default. For Hydra
-    CLI overrides, use ``+actor_rollout_ref.actor.checkpoint.hf_model_max_shard_size=5GB`` for a
-    PPO actor, ``+critic.checkpoint.hf_model_max_shard_size=5GB`` for a PPO critic, or
-    ``+checkpoint.hf_model_max_shard_size=5GB`` for SFT.
+    Add ``hf_model`` to ``save_contents``; ``null`` preserves the Transformers default. Set
+    ``actor_rollout_ref.actor.checkpoint.hf_model_max_shard_size=5GB`` for a PPO actor or
+    ``checkpoint.hf_model_max_shard_size=5GB`` for SFT.
 
   - ``load_contents``: The contents to load in the checkpoint, you can specify different checkpoint loading contents. By default, it is the same with ``save_checkpoint``.
 
