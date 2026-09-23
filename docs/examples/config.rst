@@ -352,9 +352,8 @@ Actor/Rollout/Reference Policy
     ``model`` shards.
 
   - ``hf_save_pretrained_kwargs``: Extra keyword arguments for FSDP and VeOmni
-    ``hf_model`` exports. ``null`` preserves the Transformers defaults. For a PPO actor, set
-    ``actor_rollout_ref.actor.checkpoint.hf_save_pretrained_kwargs='{max_shard_size:"5GB"}'``;
-    for SFT, set ``checkpoint.hf_save_pretrained_kwargs='{max_shard_size:"5GB"}'``.
+    ``hf_model`` exports. ``null`` preserves the Transformers defaults. For example, for a PPO actor, set
+    ``actor_rollout_ref.actor.checkpoint.hf_save_pretrained_kwargs='{max_shard_size:"5GB"}'``.
 
   - ``load_contents``: The contents to load in the checkpoint, you can specify different checkpoint loading contents. By default, it is the same with ``save_checkpoint``.
 
