@@ -357,7 +357,9 @@ Actor/Rollout/Reference Policy
     Accepts the same integer or size string syntax as Transformers ``save_pretrained``
     (for example, ``"5GB"``). The default ``null`` leaves the argument unset and preserves
     the installed Transformers default. This controls the exported file layout; it does not
-    reduce the full rank-0 CPU state-dict gather used for the export.
+    reduce the full rank-0 CPU state-dict gather used for the export. Since the field is not
+    listed in the backend YAML, prefix Hydra CLI overrides with ``+`` (for example,
+    ``+actor_rollout_ref.actor.checkpoint.hf_model_max_shard_size=5GB``).
 
   - ``load_contents``: The contents to load in the checkpoint, you can specify different checkpoint loading contents. By default, it is the same with ``save_checkpoint``.
 

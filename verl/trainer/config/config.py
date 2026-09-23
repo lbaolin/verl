@@ -42,6 +42,9 @@ class CheckpointConfig(BaseConfig):
             27B model). Loaded LoRA-only checkpoints are auto-detected and merged
             into the current model state. Has no effect when the model has no LoRA
             adapters.
+        hf_model_max_shard_size (str | int | None): Maximum size of each
+            Hugging Face model shard. None preserves the installed Transformers
+            default. Only used by FSDPCheckpointManager.
     """
 
     save_contents: list[str] = field(default_factory=lambda: ["model", "optimizer", "extra"])
@@ -49,6 +52,7 @@ class CheckpointConfig(BaseConfig):
     async_save: bool = False
     strict: bool = True
     save_lora_only: bool = False
+    hf_model_max_shard_size: str | int | None = None
 
 
 @dataclass

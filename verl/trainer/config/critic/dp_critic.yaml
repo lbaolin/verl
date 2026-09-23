@@ -25,15 +25,6 @@ _target_: verl.workers.config.FSDPCriticConfig
 # distribution strategy. Options: fsdp (deprecating), fsdp2
 strategy: fsdp
 
-# FSDP checkpoint config
-checkpoint:
-
-  # Target dataclass for this configuration
-  _target_: verl.workers.config.FSDPCheckpointConfig
-
-  # Maximum size of each Hugging Face model shard. Uses the Transformers default when null.
-  hf_model_max_shard_size: null
-
 # Forward-only batch size during inference (global)
 forward_micro_batch_size: ${oc.select:.ppo_micro_batch_size,null}
 

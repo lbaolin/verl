@@ -17,8 +17,8 @@ import json
 import torch
 from transformers import AutoModelForCausalLM, Qwen3Config
 
+from verl.trainer.config import CheckpointConfig
 from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager
-from verl.workers.config import FSDPCheckpointConfig
 
 
 def _tiny_qwen3_model():
@@ -39,7 +39,7 @@ def test_configured_max_shard_size_produces_sharded_hf_export(monkeypatch, tmp_p
     monkeypatch.setattr(torch.distributed, "get_world_size", lambda: 1)
     monkeypatch.setattr(torch.distributed, "barrier", lambda: None)
 
-    checkpoint_config = FSDPCheckpointConfig(
+    checkpoint_config = CheckpointConfig(
         save_contents=["hf_model"],
         load_contents=[],
         hf_model_max_shard_size="1KB",
