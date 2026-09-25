@@ -56,6 +56,9 @@ checkpoint:
   # For more flexibility, you can specify the contents to load from the checkpoint.
   load_contents: ${checkpoint.save_contents}
 
+  # Set to bfloat16 to export BF16 Hugging Face weights; null preserves the gathered state dict dtype.
+  hf_export_dtype: null
+
 trainer:
   default_local_dir: checkpoints/${trainer.project_name}/${trainer.experiment_name}
   default_hdfs_dir: null
