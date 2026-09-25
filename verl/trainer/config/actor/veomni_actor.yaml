@@ -18,7 +18,7 @@ strategy: veomni
 # checkpoint configs
 checkpoint:
 
-  # Set to bfloat16 to export BF16 Hugging Face weights; null preserves the gathered state dict dtype.
+  # Hugging Face export dtype using verl precision names such as bf16, fp16, or fp32; null preserves the gathered dtype.
   hf_export_dtype: null
 
 use_remove_padding: ${oc.select:actor_rollout_ref.model.use_remove_padding,false}

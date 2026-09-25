@@ -32,6 +32,7 @@ from verl.utils.device import is_cuda_available
 from verl.utils.fs import copy_to_local, is_non_local, local_mkdir_safe
 from verl.utils.fsdp_utils import fsdp_version, get_fsdp_full_state_dict, get_fsdp_state_ctx
 from verl.utils.logger import log_with_rank
+from verl.utils.torch_dtypes import PrecisionType
 from verl.utils.transformers_compat import drop_tied_target_keys, get_auto_model_for_vision2seq
 
 from .checkpoint_manager import BaseCheckpointManager
@@ -99,9 +100,7 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         )
         self.trust_remote_code = trust_remote_code
         hf_export_dtype = checkpoint_config.get("hf_export_dtype", None) if checkpoint_config else None
-        if hf_export_dtype not in {None, "bf16", "bfloat16"}:
-            raise ValueError("hf_export_dtype must be null or bfloat16")
-        self.hf_export_dtype = torch.bfloat16 if hf_export_dtype else None
+        self.hf_export_dtype = PrecisionType.to_dtype(hf_export_dtype) if hf_export_dtype is not None else None
 
     def _get_lora_train_meta(self, unwrap_model):
         peft_config = getattr(unwrap_model, "peft_config", None)
@@ -447,7 +446,9 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
                 with init_empty_weights():
                     save_model = auto_model_cls.from_config(
-                        model_config, torch_dtype=torch.bfloat16, trust_remote_code=self.trust_remote_code
+                        model_config,
+                        torch_dtype=self.hf_export_dtype or torch.bfloat16,
+                        trust_remote_code=self.trust_remote_code,
                     )
 
                 save_model.to_empty(device="cpu")
