@@ -41,16 +41,6 @@ logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "INFO"))
 
 
-def _cast_hf_state_dict(state_dict: dict[str, torch.Tensor], export_dtype: Optional[str]) -> dict[str, torch.Tensor]:
-    if export_dtype is None:
-        return state_dict
-
-    for name, tensor in state_dict.items():
-        if torch.is_floating_point(tensor):
-            state_dict[name] = tensor.to(dtype=torch.bfloat16)
-    return state_dict
-
-
 @dataclass
 class FSDPConfig:
     """Configuration for FSDP checkpointing.
@@ -108,9 +98,10 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             checkpoint_config=checkpoint_config,
         )
         self.trust_remote_code = trust_remote_code
-        self.hf_export_dtype = checkpoint_config.get("hf_export_dtype", None) if checkpoint_config else None
-        if self.hf_export_dtype not in {None, "bf16", "bfloat16"}:
+        hf_export_dtype = checkpoint_config.get("hf_export_dtype", None) if checkpoint_config else None
+        if hf_export_dtype not in {None, "bf16", "bfloat16"}:
             raise ValueError("hf_export_dtype must be null or bfloat16")
+        self.hf_export_dtype = torch.bfloat16 if hf_export_dtype else None
 
     def _get_lora_train_meta(self, unwrap_model):
         peft_config = getattr(unwrap_model, "peft_config", None)
@@ -471,7 +462,10 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                         )
 
                 drop_tied_target_keys(state_dict, save_model, model_config)
-                state_dict = _cast_hf_state_dict(state_dict, self.hf_export_dtype)
+                if self.hf_export_dtype is not None:
+                    for name, tensor in state_dict.items():
+                        if torch.is_floating_point(tensor):
+                            state_dict[name] = tensor.to(dtype=self.hf_export_dtype)
 
                 save_model.save_pretrained(hf_local_path, state_dict=state_dict)
                 log_with_rank(
