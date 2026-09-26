@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import json
 import logging
 import os
@@ -444,9 +445,10 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                 else:
                     raise NotImplementedError(f"Unknown architecture {model_config['architectures']}")
 
+                hf_model_config = copy.deepcopy(model_config)
                 with init_empty_weights():
                     save_model = auto_model_cls.from_config(
-                        model_config,
+                        hf_model_config,
                         torch_dtype=self.hf_export_dtype or torch.bfloat16,
                         trust_remote_code=self.trust_remote_code,
                     )
