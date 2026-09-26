@@ -15,7 +15,10 @@ _target_: verl.workers.config.VeOmniActorConfig
 
 strategy: veomni
 
+# Preserve gathered tensor dtypes in Hugging Face exports by default
 checkpoint:
+
+  # Optional export dtype: bf16, fp16, or fp32
   hf_export_dtype: null
 
 use_remove_padding: ${oc.select:actor_rollout_ref.model.use_remove_padding,false}

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import json
 import logging
 import os
@@ -467,6 +468,14 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                             state_dict[name] = tensor.to(dtype=self.hf_export_dtype)
 
                 save_model.save_pretrained(hf_local_path, state_dict=state_dict)
+                if self.hf_export_dtype is not None:
+                    export_config = copy.deepcopy(save_model.config)
+                    export_config.dtype = self.hf_export_dtype
+                    for sub_config_key in getattr(export_config, "sub_configs", {}):
+                        sub_config = getattr(export_config, sub_config_key, None)
+                        if sub_config is not None:
+                            sub_config.dtype = self.hf_export_dtype
+                    export_config.save_pretrained(hf_local_path)
                 log_with_rank(
                     f"Saved hf_model to {os.path.abspath(hf_local_path)}",
                     rank=self.rank,
