@@ -56,7 +56,7 @@ checkpoint:
   # For more flexibility, you can specify the contents to load from the checkpoint.
   load_contents: ${checkpoint.save_contents}
 
-  # Extra keyword arguments forwarded to Hugging Face save_pretrained.
+  # Extra save_pretrained keyword arguments for FSDP/VeOmni Hugging Face exports
   hf_save_pretrained_kwargs: null
 
 trainer:

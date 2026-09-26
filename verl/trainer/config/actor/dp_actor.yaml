@@ -25,12 +25,6 @@ _target_: verl.workers.config.FSDPActorConfig
 # TODO(haibin.lin): switch to fsdp2
 strategy: fsdp
 
-# checkpoint configs
-checkpoint:
-
-  # Extra keyword arguments forwarded to Hugging Face save_pretrained.
-  hf_save_pretrained_kwargs: null
-
 # Gradient clipping for actor updates, specific to the strategy.
 grad_clip: 1.0
 
