@@ -56,7 +56,6 @@ checkpoint:
   # For more flexibility, you can specify the contents to load from the checkpoint.
   load_contents: ${checkpoint.save_contents}
 
-  # Hugging Face export dtype using verl precision names such as bf16, fp16, or fp32; null preserves the gathered dtype.
   hf_export_dtype: null
 
 trainer:
