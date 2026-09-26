@@ -56,7 +56,7 @@ checkpoint:
   # For more flexibility, you can specify the contents to load from the checkpoint.
   load_contents: ${checkpoint.save_contents}
 
-  # Optional Hugging Face export dtype: bf16, fp16, or fp32
+  # Floating-point dtype for Hugging Face exports; null preserves the gathered dtype
   hf_export_dtype: null
 
 trainer:

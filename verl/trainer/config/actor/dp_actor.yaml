@@ -25,10 +25,10 @@ _target_: verl.workers.config.FSDPActorConfig
 # TODO(haibin.lin): switch to fsdp2
 strategy: fsdp
 
-# Preserve gathered tensor dtypes in Hugging Face exports by default
+# Export dtype does not change training precision
 checkpoint:
 
-  # Optional export dtype: bf16, fp16, or fp32
+  # Floating-point dtype for Hugging Face exports; null preserves the gathered dtype
   hf_export_dtype: null
 
 # Gradient clipping for actor updates, specific to the strategy.
