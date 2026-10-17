@@ -23,10 +23,11 @@ from verl.workers.config.distillation import DistillationConfig
 
 
 @pytest.fixture
-def supported_config():
+def supported_config(request):
     config_dir = Path(__file__).resolve().parents[3] / "verl/trainer/config"
     with initialize_config_dir(config_dir=str(config_dir), version_base=None):
-        config = compose(config_name="ppo_trainer")
+        overrides = [f"model_engine={request.param}"] if hasattr(request, "param") else []
+        config = compose(config_name="ppo_trainer", overrides=overrides)
     for path, value in {
         "distillation.teacher_rollout_probability": 0.5,
         "distillation.enabled": True,
@@ -83,6 +84,8 @@ def test_supported_config(supported_config):
         ("actor_rollout_ref.rollout.calculate_log_probs", True),
         ("actor_rollout_ref.rollout.topk_log_probs", 2),
         ("actor_rollout_ref.actor.engine.router_replay.mode", "R3"),
+        ("actor_rollout_ref.rollout.enable_rollout_routing_replay", True),
+        ("distillation.teacher_models.teacher_model.inference.enable_rollout_routing_replay", True),
         ("actor_rollout_ref.rollout.multi_turn.enable", True),
         ("actor_rollout_ref.rollout.agent.default_agent_loop", "tool_agent"),
         ("actor_rollout_ref.rollout.agent.agent_loop_manager_class", "custom.Manager"),
@@ -98,6 +101,9 @@ def test_supported_config(supported_config):
         ("actor_rollout_ref.rollout.temperature", 0.7),
         ("distillation.teacher_models.teacher_model.inference.temperature", 0.7),
         ("actor_rollout_ref.model.mtp.enable_rollout", True),
+        ("distillation.teacher_models.teacher_model.inference.mtp.enable", True),
+        ("distillation.teacher_models.teacher_model.inference.mtp.enable_train", True),
+        ("distillation.teacher_models.teacher_model.inference.mtp.enable_rollout", True),
     ],
 )
 def test_opt_in_rejects_unsupported_config(supported_config, path, value):
@@ -111,6 +117,21 @@ def test_zero_preserves_existing_config_freedom(supported_config):
     supported_config.trainer.v1.trainer_mode = "separate_async"
     supported_config.distillation.distillation_loss.use_policy_gradient = True
     config_utils._validate_teacher_rollout_config(supported_config)
+
+
+@pytest.mark.parametrize("supported_config", ["megatron", "veomni"], indirect=True)
+@pytest.mark.parametrize("mode", ["disabled", "R2", "R3"])
+def test_backend_router_replay_config(supported_config, mode):
+    strategy = supported_config.actor_rollout_ref.actor.strategy
+    path = f"actor_rollout_ref.actor.{strategy}.router_replay.mode"
+    # Raw Hydra configs do not expose the dataclass's synthesized actor.engine alias.
+    assert OmegaConf.select(supported_config, "actor_rollout_ref.actor.engine") is None
+    OmegaConf.update(supported_config, path, mode)
+    if mode == "disabled":
+        config_utils._validate_teacher_rollout_config(supported_config)
+    else:
+        with pytest.raises(ValueError, match="router_replay"):
+            config_utils._validate_teacher_rollout_config(supported_config)
 
 
 def test_counts_resolved_teachers(supported_config):

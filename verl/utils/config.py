@@ -146,7 +146,10 @@ def _validate_teacher_rollout_config(config: DictConfig) -> None:
         ("actor_rollout_ref.actor.entropy_coeff", 0, 0),
         ("actor_rollout_ref.rollout.calculate_log_probs", False, True),
         ("actor_rollout_ref.rollout.topk_log_probs", 0, 0),
+        ("actor_rollout_ref.rollout.enable_rollout_routing_replay", False, False),
         ("actor_rollout_ref.actor.engine.router_replay.mode", "disabled", "disabled"),
+        ("actor_rollout_ref.actor.megatron.router_replay.mode", "disabled", "disabled"),
+        ("actor_rollout_ref.actor.veomni.router_replay.mode", "disabled", "disabled"),
         ("actor_rollout_ref.rollout.temperature", 1.0, None),
         ("algorithm.filter_groups.enable", False, False),
         ("trainer.v1.sampler.sync_refill_failed_groups", False, False),
@@ -186,6 +189,9 @@ def _validate_teacher_rollout_config(config: DictConfig) -> None:
     prefix = f"distillation.teacher_models.{names[0]}"
     require(f"{prefix}.inference.name", "vllm")
     require(f"{prefix}.inference.temperature", 1.0)
+    require(f"{prefix}.inference.enable_rollout_routing_replay", False, False)
+    for key in ("enable", "enable_train", "enable_rollout"):
+        require(f"{prefix}.inference.mtp.{key}", False, False)
     if OmegaConf.select(config, f"{prefix}.inference.engine_kwargs.vllm.speculative_config"):
         raise ValueError(f"teacher_rollout_probability > 0 does not support {prefix}.inference speculative_config.")
     if not OmegaConf.select(config, f"{prefix}.model_path"):
