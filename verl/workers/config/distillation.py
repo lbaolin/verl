@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import math
 import os
 from dataclasses import dataclass, field
 from typing import Optional
@@ -224,6 +225,9 @@ class DistillationConfig(BaseConfig):
 
     enabled (bool):
         Whether on-policy distillation is enabled.
+    teacher_rollout_probability (float):
+        Probability of using the frozen teacher to generate a global rollout batch.
+        Zero preserves student-only generation; requires synchronous supervised top-k distillation.
     n_gpus_per_node (int):
         Number of GPUs per node in the teacher resource pool.
     nnodes (int):
@@ -260,6 +264,7 @@ class DistillationConfig(BaseConfig):
     _mutable_fields = BaseConfig._mutable_fields | {"teacher_models", "n_gpus_per_node", "nnodes"}
 
     enabled: bool = False
+    teacher_rollout_probability: float = 0.0
     n_gpus_per_node: int = 0
     nnodes: int = 0
     teacher_models: dict[str, DistillationTeacherModelConfig] = field(default_factory=dict)
@@ -267,6 +272,8 @@ class DistillationConfig(BaseConfig):
     distillation_loss: DistillationLossConfig = field(default_factory=DistillationLossConfig)
 
     def __post_init__(self):
+        if not math.isfinite(self.teacher_rollout_probability) or not 0.0 <= self.teacher_rollout_probability <= 1.0:
+            raise ValueError("teacher_rollout_probability must be finite and in [0, 1].")
         if not self.enabled:
             return
 

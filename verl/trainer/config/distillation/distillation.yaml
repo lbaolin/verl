@@ -13,6 +13,10 @@ defaults:
 # Whether to enable distillation.
 enabled: false
 
+# Probability of teacher generation for an entire training rollout batch (0: student, 1: teacher).
+# Opt-in: synchronous V1, one vLLM teacher, text-only single-turn, supervised forward_kl_topk.
+teacher_rollout_probability: 0.0
+
 # distillation loss config
 distillation_loss:
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from dataclasses import is_dataclass
 from typing import Any, Optional
 
@@ -117,6 +118,80 @@ def _validate_score_centering_config(config: DictConfig) -> None:
         raise ValueError("score centering cannot be combined with distillation.")
 
 
+def _validate_teacher_rollout_config(config: DictConfig) -> None:
+    """Fail before allocation when teacher generation would enter an unsupported training path."""
+    probability = OmegaConf.select(config, "distillation.teacher_rollout_probability", default=0.0)
+    if not math.isfinite(probability) or not 0.0 <= probability <= 1.0:
+        raise ValueError("distillation.teacher_rollout_probability must be finite and in [0, 1].")
+    if probability == 0.0:
+        return
+
+    def require(path: str, expected: Any, default: Any = None) -> None:
+        if OmegaConf.select(config, path, default=default) != expected:
+            raise ValueError(f"teacher_rollout_probability > 0 requires {path}={expected!r}.")
+
+    for path, expected, default in (
+        ("distillation.enabled", True, False),
+        ("trainer.use_v1", True, True),
+        ("trainer.v1.trainer_mode", "sync", "sync"),
+        ("actor_rollout_ref.rollout.name", "vllm", None),
+        ("actor_rollout_ref.rollout.agent.default_agent_loop", "single_turn_agent", "single_turn_agent"),
+        ("actor_rollout_ref.rollout.multi_turn.enable", False, False),
+        ("distillation.distillation_loss.loss_mode", "forward_kl_topk", None),
+        ("distillation.distillation_loss.use_policy_gradient", False, True),
+        ("distillation.distillation_loss.use_task_rewards", False, True),
+        ("algorithm.adv_estimator", "grpo", None),
+        ("algorithm.use_kl_in_reward", False, False),
+        ("actor_rollout_ref.actor.use_kl_loss", False, False),
+        ("actor_rollout_ref.actor.entropy_coeff", 0, 0),
+        ("actor_rollout_ref.rollout.calculate_log_probs", False, True),
+        ("actor_rollout_ref.rollout.topk_log_probs", 0, 0),
+        ("actor_rollout_ref.actor.engine.router_replay.mode", "disabled", "disabled"),
+        ("actor_rollout_ref.rollout.temperature", 1.0, None),
+        ("algorithm.filter_groups.enable", False, False),
+        ("trainer.v1.sampler.sync_refill_failed_groups", False, False),
+    ):
+        require(path, expected, default)
+    if OmegaConf.select(config, "critic.enable", default=False):
+        raise ValueError("teacher_rollout_probability > 0 requires critic.enable=false or null.")
+
+    for path in (
+        "actor_rollout_ref.rollout.agent.agent_loop_manager_class",
+        "actor_rollout_ref.rollout.agent.agent_loop_config_path",
+        "trainer.v1.sampler.custom_sampler.path",
+        "trainer.v1.sampler.custom_sampler.name",
+        "actor_rollout_ref.rollout.engine_kwargs.vllm.speculative_config",
+    ):
+        if OmegaConf.select(config, path):
+            raise ValueError(f"teacher_rollout_probability > 0 does not support {path}.")
+    for prefix in ("actor_rollout_ref.model.mtp", "actor_rollout_ref.rollout.mtp"):
+        for key in ("enable", "enable_train", "enable_rollout"):
+            require(f"{prefix}.{key}", False, False)
+    for prefix in ("algorithm.rollout_correction", "actor_rollout_ref.actor.policy_loss.rollout_correction"):
+        require(f"{prefix}.bypass_mode", False, False)
+        require(f"{prefix}.score_centering", False, False)
+        require(f"{prefix}.rollout_is", None)
+        require(f"{prefix}.rollout_rs", None)
+
+    topk = config.distillation.distillation_loss.topk
+    if topk is None or topk <= 0:
+        raise ValueError("teacher_rollout_probability > 0 requires distillation.distillation_loss.topk > 0.")
+    teachers = config.distillation.teacher_models
+    # Match DistillationConfig._resolve_teacher_models: custom entries replace the default entry.
+    names = [name for name in teachers if name != "teacher_model"] if len(teachers) > 1 else list(teachers)
+    if len(names) != 1:
+        raise ValueError(
+            "teacher_rollout_probability > 0 requires exactly one resolved distillation.teacher_models entry."
+        )
+    prefix = f"distillation.teacher_models.{names[0]}"
+    require(f"{prefix}.inference.name", "vllm")
+    require(f"{prefix}.inference.temperature", 1.0)
+    if OmegaConf.select(config, f"{prefix}.inference.engine_kwargs.vllm.speculative_config"):
+        raise ValueError(f"teacher_rollout_probability > 0 does not support {prefix}.inference speculative_config.")
+    if not OmegaConf.select(config, f"{prefix}.model_path"):
+        raise ValueError(f"teacher_rollout_probability > 0 requires {prefix}.model_path.")
+
+
 def validate_config(
     config: DictConfig,
     use_reference_policy: bool,
@@ -129,6 +204,8 @@ def validate_config(
         use_reference_policy (bool): is ref policy needed
         use_critic (bool): is critic needed
     """
+    _validate_teacher_rollout_config(config)
+
     # number of GPUs total
     n_gpus = config.trainer.n_gpus_per_node * config.trainer.nnodes
 

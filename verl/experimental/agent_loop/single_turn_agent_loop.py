@@ -16,6 +16,8 @@ import os
 from typing import Any
 from uuid import uuid4
 
+from omegaconf import OmegaConf
+
 from verl.experimental.agent_loop.agent_loop import AgentLoopBase, AgentLoopOutput, register
 from verl.utils.profiler import simple_timer
 from verl.utils.rollout_trace import rollout_trace_op
@@ -45,6 +47,10 @@ class SingleTurnAgentLoop(AgentLoopBase):
         images = multi_modal_data.get("images")
         videos = multi_modal_data.get("videos")
         audios = multi_modal_data.get("audios")
+        if OmegaConf.select(self.config, "distillation.teacher_rollout_probability", default=0.0) > 0 and any(
+            value is not None and len(value) > 0 for value in (images, videos, audios)
+        ):
+            raise ValueError("teacher_rollout_probability > 0 supports text-only inputs.")
         mm_processor_kwargs = self._get_mm_processor_kwargs(audios)
 
         # 2. build the initial prompt with Continuous Token (the only tokenization path).

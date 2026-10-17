@@ -32,7 +32,7 @@ import logging
 import os
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from uuid import uuid4
 
 import hydra
@@ -682,8 +682,30 @@ class AgentLoopWorker:
         *,
         agent_name: str,
         trace: bool = True,
+        rollout_source: Literal["student", "teacher"] = "student",
         **kwargs,
     ) -> _InternalAgentLoopOutput:
+        teacher_rollouts = OmegaConf.select(self.config, "distillation.teacher_rollout_probability", default=0.0) > 0
+        if teacher_rollouts and agent_name != "single_turn_agent":
+            raise ValueError("teacher_rollout_probability > 0 requires the single_turn_agent for every sample.")
+        if trajectory["validate"]:
+            rollout_source = "student"
+        if rollout_source not in ("student", "teacher"):
+            raise ValueError(f"Unknown rollout_source: {rollout_source!r}")
+        client = self.llm_client
+        if rollout_source == "teacher":
+            if not teacher_rollouts or len(self.teacher_client) != 1:
+                raise ValueError("Teacher generation requires teacher_rollout_probability > 0 and exactly one teacher.")
+            client = next(iter(self.teacher_client.values()))
+            # Scoring prepares response_length=1 on this same server. Override only the generation request.
+            sampling_params = dict(sampling_params)
+            sampling_params.update(
+                max_tokens=self.rollout_config.response_length,
+                logprobs=False,
+                ignore_eos=self.rollout_config.ignore_eos,
+            )
+            sampling_params.pop("prompt_logprobs", None)
+            sampling_params.pop("topk_log_probs", None)
         with rollout_trace_attr(
             step=trajectory["step"],
             sample_index=trajectory["sample_index"],
@@ -700,7 +722,7 @@ class AgentLoopWorker:
             agent_loop = hydra.utils.instantiate(
                 config=agent_loop_config,
                 trainer_config=DictConfigWrap(config=self.config),
-                server_manager=self.llm_client,
+                server_manager=client,
                 tokenizer=self.tokenizer,
                 processor=self.processor,
                 hf_model_type=self.hf_model_type,
@@ -709,6 +731,22 @@ class AgentLoopWorker:
                 tools=ToolListWrap(self.tools),
             )
             output: AgentLoopOutput = await agent_loop.run(sampling_params, **kwargs)
+            if rollout_source == "teacher":
+                # Teacher behavior probabilities and versions must never enter student PPO/replay diagnostics.
+                output = output.model_copy(update={"response_logprobs": None, "routed_experts": None})
+                output.extra_fields = dict(output.extra_fields)
+                for key in (
+                    "global_steps",
+                    "min_global_steps",
+                    "max_global_steps",
+                    "response_topk_ids",
+                    "response_topk_log_probs",
+                    "teacher_ids",
+                    "teacher_logprobs",
+                ):
+                    output.extra_fields.pop(key, None)
+            if teacher_rollouts:
+                kwargs["rollout_source"] = rollout_source
             return await self._agent_loop_postprocess(output, trajectory["validate"], **kwargs)
 
     def _pad_token_ids(

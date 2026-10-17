@@ -47,6 +47,7 @@ from verl.single_controller.ray import (
     create_colocated_worker_cls,
 )
 from verl.trainer.distillation import is_distillation_enabled
+from verl.trainer.distillation.rollout import select_rollout_source
 from verl.trainer.ppo import core_algos
 from verl.trainer.ppo.checkpoint_callback import build_checkpoint_callback
 from verl.trainer.ppo.core_algos import agg_loss
@@ -1495,6 +1496,10 @@ class PPOTrainer(ABC):
 
     def _submit_batch_to_rollout(self, batch: TensorDict) -> int:
         """Register prompts in TransferQueue and dispatch them for generation."""
+        probability = OmegaConf.select(self.config, "distillation.teacher_rollout_probability", default=0.0)
+        if probability > 0:
+            source = select_rollout_source(probability, self.config.actor_rollout_ref.rollout.seed, self.global_steps)
+            tu.assign_non_tensor_data(batch, "rollout_source", source)
         tags = [{"is_prompt": True, "status": "pending", "global_steps": self.global_steps} for _ in range(len(batch))]
         if self.trainer_mode != "sync":
             tq.kv_batch_put(
@@ -1898,8 +1903,14 @@ class PPOTrainer(ABC):
         prompt_length = data["prompts"].offsets().diff()
         response_length = data["responses"].offsets().diff()
         global_token_num = (prompt_length + response_length).tolist()
-        min_global_steps = np.array([tag["min_global_steps"] for tag in batch.tags], dtype=int)[non_padding_mask]
-        max_global_steps = np.array([tag["max_global_steps"] for tag in batch.tags], dtype=int)[non_padding_mask]
+        real_tags = [tag for tag in batch.tags if not tag.get("is_padding", False)]
+        if OmegaConf.select(self.config, "distillation.teacher_rollout_probability", default=0.0) > 0 and real_tags:
+            metrics["distillation/teacher_rollout_fraction"] = sum(
+                tag.get("rollout_source", "student") == "teacher" for tag in real_tags
+            ) / len(real_tags)
+        student_tags = [tag for tag in real_tags if tag.get("rollout_source", "student") == "student"]
+        min_global_steps = np.array([tag["min_global_steps"] for tag in student_tags], dtype=int)
+        max_global_steps = np.array([tag["max_global_steps"] for tag in student_tags], dtype=int)
 
         # Only fetch speculative decoding stats when rollout writes them.
         spec_drafts = spec_accepts = spec_verifies = None
@@ -1979,6 +1990,8 @@ class PPOTrainer(ABC):
         #     so the lag is a range: the freshest weights used give the lower bound
         #     (global_steps - max_global_steps) and the oldest weights the worst case
         #     (global_steps - min_global_steps). We log the lower bound as the primary metric.
+        if not student_tags:
+            return
         trajectory_spans = max_global_steps - min_global_steps + 1
         trajectory_staleness = (global_steps - 1) - max_global_steps
         trajectory_staleness_worst = (global_steps - 1) - min_global_steps
